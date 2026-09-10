@@ -20,7 +20,7 @@ lapNum = 0
 
 def controller(x):
 
-    global distance, track_distance, time, lapNum, theta_error
+    global distance, track_distance, time, lapNum, theta_error, e_current, e_previous
 
     xpos  = x[0]                   # current x position
     ypos  = x[1]                   # current y position
@@ -40,7 +40,7 @@ def controller(x):
     time += dt
 
     dist_to_origin = np.hypot(xpos, ypos)
-    if distance > 30.0 and np.abs(xpos) <= 1.0 and np.abs(ypos) <= 1.0:
+    if distance > 30.0 and np.abs(xpos) <= 2.0 and np.abs(ypos) <= 2.0:
         track_distance = distance
         lapNum += 1
         print(f"Lap Distance: {track_distance}")
@@ -73,18 +73,20 @@ def controller(x):
     theta_error = theta_error - theta
 
     derivative = (e_current - e_previous)/dt
-    derivative *= 10
+    e_previous = e_current
+    e_current = theta_error
+    derivative *= 4
 
     if v < 25: a = 4
     else: a = 0
 
-    if theta_error > 0.15:
+    if theta_error > 0.15 and v > 15:
         a = -0.5
         p = 12
     else:
         p = 15
         
-    theta_prime = np.clip(12 * theta_error + derivative, -1.0, 1.0)
+    theta_prime = np.clip(15 * theta_error + derivative, -1.0, 1.0)
 
 
     return np.array([a, theta_prime])
