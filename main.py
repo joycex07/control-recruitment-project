@@ -41,32 +41,14 @@ def controller(x):
 
     index = np.argmin((c[:, 0] - xpos)**2 + (c[:, 1] - ypos)**2)
     
-    ## index = np.argmin(distance_all)
 
     distance = center_path[index] % 105
 
     previous = index
 
 
-
-    ##distance traveled by the car -- inaccurate, especially when car deviates a lot from the path
-    ###distance += v * dt 
-    time += dt
-
-    """if distance > 30.0 and np.abs(xpos) <= 2.0 and np.abs(ypos) <= 2.0:
-        track_distance = distance
-        lapNum += 1
-        print(f"Lap Distance: {track_distance}")
-        print(f"Lap Number: {lapNum}")
-        ## print(f"Lap Time: {time}" )
-        print(" ")
-        
-        time = 0.0
-        ## distance = 0
-    """
-
-    near = np.clip(0.3 * v, 4,  8)
-    far = np.clip(0.5 * v + 5, 9, 15)
+    near = np.clip(0.3 * v, 3, 6)
+    far = np.clip(0.5 * v + 5, 8, 15)
 
     near_angle = angle_offset(distance, near, xpos, ypos, phi)
     far_angle = angle_offset(distance, far, xpos, ypos, phi)
@@ -79,25 +61,6 @@ def controller(x):
         p = 10
 
     
-
-
-    """ forward_distance = 0.2 * v + 5
-    forward_distance = np.clip(forward_distance, 5, 8)
-
-
-    next = centerline(distance + forward_distance)
-
-    target_angle = np.arctan2(next[1]-ypos, next[0]-xpos)
-
-    theta_error = target_angle - phi
-
-    if theta_error > np.pi:
-        theta_error -= 2*np.pi
-    elif theta_error < -np.pi:
-        theta_error += 2*np.pi
-    
-    theta_error = np.clip(theta_error, -0.7, 0.7)
-    """
     
     theta_error = theta_error - theta
 
@@ -110,12 +73,13 @@ def controller(x):
 
 
     if np.abs(far_angle) > 0.2 and v > 20:
-        a = -1.5
+        a = -1
 
         
     theta_prime = np.clip(16 * theta_error + derivative, -1.0, 1.0)
 
     return np.array([a, theta_prime])
+
 
 
 
