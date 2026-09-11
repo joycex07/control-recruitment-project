@@ -1,26 +1,29 @@
 import numpy as np
 from simulator import Simulator, centerline
-import time
 
 sim = Simulator()
 
 distance = 0.0  
 track_distance = 0.0
-time = 0
+time = 0.0
 theta_error = 0
 
-e_previous = theta_error
-e_current = 0
-
+e_previous = 0
 
 dt = 0.01
 
 lapNum = 0
 
+previous = 0
+
+center_path = np.arange(1, 1051) / 2## little sections of car
+c = np.array([centerline(i) for i in center_path])
+distance_all = np.empty(c.shape[0])
+
 
 def controller(x):
 
-    global distance, track_distance, time, lapNum, theta_error, e_current, e_previous
+    global distance, track_distance, time, lapNum, theta_error, e_previous, previous
 
     xpos  = x[0]                   # current x position
     ypos  = x[1]                   # current y position
@@ -36,25 +39,50 @@ def controller(x):
     2. figure out pid control -- the derivative to add to the angle to stabilize it
     """
 
-    distance += v * dt
+    index = np.argmin((c[:, 0] - xpos)**2 + (c[:, 1] - ypos)**2)
+    
+    ## index = np.argmin(distance_all)
+
+    distance = center_path[index] % 105
+
+    previous = index
+
+
+
+    ##distance traveled by the car -- inaccurate, especially when car deviates a lot from the path
+    ###distance += v * dt 
     time += dt
 
-    dist_to_origin = np.hypot(xpos, ypos)
-    if distance > 30.0 and np.abs(xpos) <= 2.0 and np.abs(ypos) <= 2.0:
+    """if distance > 30.0 and np.abs(xpos) <= 2.0 and np.abs(ypos) <= 2.0:
         track_distance = distance
         lapNum += 1
         print(f"Lap Distance: {track_distance}")
         print(f"Lap Number: {lapNum}")
-        print(f"Lap Time: {time}" )
+        ## print(f"Lap Time: {time}" )
         print(" ")
+        
         time = 0.0
-        distance = 0
+        ## distance = 0
+    """
 
+    near = np.clip(0.3 * v, 4,  8)
+    far = np.clip(0.5 * v + 5, 9, 15)
 
-    if v > 15:
-        forward_distance = 5
+    near_angle = angle_offset(distance, near, xpos, ypos, phi)
+    far_angle = angle_offset(distance, far, xpos, ypos, phi)
+
+    if (np.abs(near_angle - far_angle) < 0.1):
+        theta_error = far_angle
+        p = 11
     else:
-        forward_distance = 3
+        theta_error = near_angle
+        p = 10
+
+    
+
+
+    """ forward_distance = 0.2 * v + 5
+    forward_distance = np.clip(forward_distance, 5, 8)
 
 
     next = centerline(distance + forward_distance)
@@ -63,39 +91,53 @@ def controller(x):
 
     theta_error = target_angle - phi
 
-    
     if theta_error > np.pi:
         theta_error -= 2*np.pi
     elif theta_error < -np.pi:
         theta_error += 2*np.pi
-
+    
     theta_error = np.clip(theta_error, -0.7, 0.7)
+    """
+    
     theta_error = theta_error - theta
 
-    derivative = (e_current - e_previous)/dt
-    e_previous = e_current
-    e_current = theta_error
-    derivative *= 4
+    derivative = (theta_error - e_previous)/dt
+    e_previous = theta_error
+    derivative *= 0.75
 
-    if v < 25: a = 4
+    if v < 30: a = 4
     else: a = 0
 
-    if theta_error > 0.15 and v > 15:
-        a = -0.5
-        p = 12
-    else:
-        p = 15
-        
-    theta_prime = np.clip(15 * theta_error + derivative, -1.0, 1.0)
 
+    if np.abs(far_angle) > 0.2 and v > 20:
+        a = -1.5
+
+        
+    theta_prime = np.clip(16 * theta_error + derivative, -1.0, 1.0)
 
     return np.array([a, theta_prime])
 
 
 
 
+def angle_offset (distance, forward_distance, xpos, ypos, phi):
+
+    next = centerline(distance + forward_distance)
+    target_angle = np.arctan2(next[1]-ypos, next[0]-xpos)
+    theta_error = target_angle - phi
+    
+    if theta_error > np.pi:
+        theta_error -= 2*np.pi
+    elif theta_error < -np.pi:
+        theta_error += 2*np.pi
+        
+    theta_error = np.clip(theta_error, -0.7, 0.7)
+
+    return theta_error
+
+
 
 sim.set_controller(controller)
 sim.run()
-# sim.plot()
+##sim.plot()
 sim.animate()
