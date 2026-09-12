@@ -32,15 +32,7 @@ def controller(x):
     theta = x[4]                   # current steering angle
 
 
-
-    """
-    optimizing:
-    1. dynamic forward_distance (based on velocity and angle?)
-    2. figure out pid control -- the derivative to add to the angle to stabilize it
-    """
-
     index = np.argmin((c[:, 0] - xpos)**2 + (c[:, 1] - ypos)**2)
-    
 
     distance = center_path[index] % 105
 
@@ -48,12 +40,12 @@ def controller(x):
 
 
     near = np.clip(0.3 * v, 3, 6)
-    far = np.clip(0.5 * v + 5, 8, 15)
+    far = np.clip(0.5 * v + 6, 8, 15)
 
     near_angle = angle_offset(distance, near, xpos, ypos, phi)
     far_angle = angle_offset(distance, far, xpos, ypos, phi)
 
-    if (np.abs(near_angle - far_angle) < 0.1):
+    if (np.abs(near_angle - far_angle) < 0.15):
         theta_error = far_angle
         p = 11
     else:
@@ -73,7 +65,8 @@ def controller(x):
 
 
     if np.abs(far_angle) > 0.2 and v > 20:
-        a = -1
+        a = -0.5
+
 
         
     theta_prime = np.clip(16 * theta_error + derivative, -1.0, 1.0)
